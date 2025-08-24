@@ -1,0 +1,29 @@
+# Framework principal
+fastapi==0.115.0
+
+# Servidor ASGI
+uvicorn[standard]==0.30.6
+
+# Cliente AWS (S3, SQS)
+boto3==1.35.34
+botocore==1.35.34
+
+# Config via .env
+python-dotenv==1.0.1
+
+# Validação / config (FastAPI v2)
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Tipagem
+typing-extensions==4.12.2
+
+# Necessário para Form/UploadFile
+python-multipart==0.0.9
+
+# (Opcional, melhora JSON)
+orjson==3.10.7
+
+# Testes
+pytest==8.3.3
+httpx==0.27.2

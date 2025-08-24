@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    container_name: video-service-api
+    env_file: .env
+    ports: ["8094:8094"]
+    depends_on: [localstack]
+
+  localstack:
+    image: localstack/localstack:3.7
+    container_name: localstack
+    environment:
+      - SERVICES=s3,sqs,dynamodb
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - ./scripts/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
