@@ -15,8 +15,10 @@ ALLOWED_MIME_PREFIX = "video/"  # simples e eficaz pra v1
 @router.post("/upload", response_model=UploadResponse, status_code=202)
 async def upload_video(
     file: UploadFile = File(...),
-    user_id: str = Form(...),
-    title: str = Form(..., max_length=200),
+    id_usuario: str = Form(...),
+    id_video: str = Form(...),
+    titulo: str = Form(..., max_length=200),
+    autor: str = Form(..., max_length=100)
 ):
     # validação leve de content type e tamanho
     if not (file.content_type or "").startswith(ALLOWED_MIME_PREFIX):
@@ -36,13 +38,14 @@ async def upload_video(
     # registra no DynamoDB
     now = datetime.utcnow()
     item = VideoItem(
-        id=vid,
-        user_id=user_id,
-        title=title.strip(),
+        id_video=id_video,
+        id_usuario=id_usuario,
+        titulo=titulo.strip(),
+        autor=autor.strip(),
         status="UPLOADED",
         file_path=f"s3://{settings.s3_bucket}/{key}",
-        created_at=now,
-        updated_at=now,
+        data_criacao=now,
+        data_upload=now,
     )
 
     # Use mode="json" para serializar datetimes como ISO-8601
@@ -56,7 +59,7 @@ async def upload_video(
             # não falha o upload; apenas não enfileirou (você pode logar/monitorar)
             pass
 
-    return UploadResponse(id=vid, title=item.title, status=item.status, s3_key=key)
+    return UploadResponse(id_video=item.id_video, id_usuario=item.id_usuario, titulo=item.titulo, autor=item.autor, status=item.status, s3_key=key)
 
 
 @router.get("/status/{video_id}", response_model=StatusResponse)
