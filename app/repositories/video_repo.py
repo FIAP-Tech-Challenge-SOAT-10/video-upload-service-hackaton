@@ -7,12 +7,12 @@ class VideoRepo:
         table_videos.put_item(Item=item)
 
     @staticmethod
-    def get(video_id: str) -> dict | None:
+    def get(id_video: str) -> dict | None:
         resp = table_videos.get_item(Key={"id_video": id_video})
         return resp.get("Item")
 
     @staticmethod
-    def update_status(video_id: str, status: str):
+    def update_status(id_video: str, status: str):
         table_videos.update_item(
             Key={"id_video": id_video},
             UpdateExpression="SET #s = :s, data_upload = :u",

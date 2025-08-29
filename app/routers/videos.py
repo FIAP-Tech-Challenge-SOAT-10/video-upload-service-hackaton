@@ -14,11 +14,12 @@ ALLOWED_MIME_PREFIX = "video/"  # simples e eficaz pra v1
 
 @router.post("/upload", response_model=UploadResponse, status_code=202)
 async def upload_video(
-    file: UploadFile = File(...),
-    id_usuario: str = Form(...),
     id_video: str = Form(...),
+    id_usuario: str = Form(...),
     titulo: str = Form(..., max_length=200),
-    autor: str = Form(..., max_length=100)
+    autor: str = Form(..., max_length=100),
+    file: UploadFile = File(...),
+    status: str = Form("PENDING")
 ):
     # validação leve de content type e tamanho
     if not (file.content_type or "").startswith(ALLOWED_MIME_PREFIX):
@@ -62,9 +63,9 @@ async def upload_video(
     return UploadResponse(id_video=item.id_video, id_usuario=item.id_usuario, titulo=item.titulo, autor=item.autor, status=item.status, s3_key=key)
 
 
-@router.get("/status/{video_id}", response_model=StatusResponse)
-def get_status(video_id: str):
-    item = VideoRepo.get(video_id)
+@router.get("/status/{id_video}", response_model=StatusResponse)
+def get_status(id_video: str):
+    item = VideoRepo.get(id_video)
     if not item:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
     return StatusResponse(**item)
