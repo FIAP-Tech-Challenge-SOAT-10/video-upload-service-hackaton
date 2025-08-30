@@ -1,5 +1,7 @@
+# models.py
 from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Dict, Optional
 
 class VideoItem(BaseModel):
     id_video: str
@@ -18,6 +20,7 @@ class UploadResponse(BaseModel):
     autor: str = Field(..., max_length=100)
     status: str
     s3_key: str
+    links: Optional[Dict[str, str]] = None  # <- acrescentado
 
 class StatusResponse(BaseModel):
     id_video: str
