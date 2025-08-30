@@ -16,7 +16,6 @@ ALLOWED_MIME_PREFIX = "video/"  # simples e eficaz pra v1
 
 @router.post("/upload", response_model=UploadResponse, status_code=202)
 async def upload_video(
-    id_usuario: str = Form(...),
     titulo: str = Form(..., max_length=200),
     autor: str = Form(..., max_length=100),
     file: UploadFile = File(...)
@@ -46,7 +45,6 @@ async def upload_video(
     now = datetime.utcnow()
     item = VideoItem(
         id_video=id_video,
-        id_usuario=id_usuario,
         titulo=titulo.strip(),
         autor=autor.strip(),
         status="UPLOADED",  # você pode manter "PENDENTE" aqui se preferir
@@ -73,7 +71,6 @@ async def upload_video(
     # resposta 202 com links úteis
     return UploadResponse(
         id_video=item.id_video,
-        id_usuario=item.id_usuario,
         titulo=item.titulo,
         autor=item.autor,
         status=item.status,  # "UPLOADED" (ou "PENDENTE", se você preferir manter)
@@ -83,8 +80,6 @@ async def upload_video(
             "download": f"/videos/download/{item.id_video}"
         }
     )
-
-
 
 
 @router.get("/status/{id_video}", response_model=StatusResponse)

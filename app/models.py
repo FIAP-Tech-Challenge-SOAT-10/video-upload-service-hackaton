@@ -5,7 +5,6 @@ from typing import Dict, Optional
 
 class VideoItem(BaseModel):
     id_video: str
-    id_usuario: str
     titulo: str = Field(..., max_length=200)
     autor: str = Field(..., max_length=100)
     status: str
@@ -15,7 +14,6 @@ class VideoItem(BaseModel):
 
 class UploadResponse(BaseModel):
     id_video: str
-    id_usuario: str
     titulo: str = Field(..., max_length=200)
     autor: str = Field(..., max_length=100)
     status: str
@@ -24,7 +22,6 @@ class UploadResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     id_video: str
-    id_usuario: str
     titulo: str | None = Field(default=None, max_length=200)
     autor: str | None = Field(default=None, max_length=100)
     status: str
