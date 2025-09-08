@@ -1,5 +1,6 @@
-from ..aws import table_videos
 from datetime import datetime
+from app.domain.repositories.video_repository_interface import IVideoRepository
+from app.utils.aws import table_videos
 
 class VideoRepo:
     @staticmethod
