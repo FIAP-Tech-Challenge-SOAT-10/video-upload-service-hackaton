@@ -85,7 +85,7 @@ async def upload_video(
     )
 
 
-@router.get("/status/{id_video}", response_model=StatusResponse)
+@router.get("/{id_video}", response_model=StatusResponse)
 def get_status(id_video: str, repo: IVideoRepository = Depends(get_video_repo)):
     item = repo.get(id_video)
     if not item:
