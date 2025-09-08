@@ -5,7 +5,8 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from ..config import settings
-from ..models import UploadResponse, StatusResponse, VideoItem
+from ..domain.models.video import VideoItem
+from ..domain.models.response import UploadResponse, StatusResponse 
 from ..repositories.video_repo import VideoRepo
 from ..utils.s3 import build_s3_key, put_object
 from ..aws import sqs, s3
