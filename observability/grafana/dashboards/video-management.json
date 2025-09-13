@@ -1,0 +1,303 @@
+{
+  "title": "Video Management Service — Observability",
+  "uid": "video-mgmt-obs",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "tags": ["video-service", "fiap", "prometheus"],
+  "description": "Observabilidade do Video Management Service (FastAPI) com métricas de HTTP, upload, S3/SQS/DynamoDB.",
+  "templating": {
+    "list": [
+      {
+        "type": "datasource",
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus",
+        "query": "prometheus",
+        "current": {
+          "selected": true,
+          "text": "Prometheus",
+          "value": "Prometheus"
+        }
+      },
+      {
+        "type": "query",
+        "name": "method",
+        "label": "HTTP Method",
+        "hide": 0,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "label_values(http_requests_total, method)"
+      },
+      {
+        "type": "query",
+        "name": "path",
+        "label": "Route (path template)",
+        "hide": 0,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "label_values(http_requests_total, path)"
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "type": "dashboard",
+        "name": "Annotations & Alerts",
+        "hide": true,
+        "enable": false,
+        "builtIn": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "RPS (total, 1m)",
+      "description": "Requisições por segundo (todas as rotas)",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total[1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "req/s",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Erro % (5xx, 5m)",
+      "description": "Percentual de erros 5xx entre todas as requisições",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(http_requests_total{status=~\"5..\", method=~\"$method\", path=~\"$path\"}[5m])) / sum(rate(http_requests_total{method=~\"$method\", path=~\"$path\"}[5m]))) * 100"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green"},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Upload throughput (5m)",
+      "description": "Bytes por segundo recebidos em uploads",
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(video_upload_bytes_total[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS por rota (1m)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (method, path) (rate(http_requests_total{method=~\"$method\", path=~\"$path\"}[1m]))",
+          "legendFormat": "{{method}} {{path}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "req/s"},
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "single"}
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Taxa de erro (4xx/5xx, 5m)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_requests_total{status=~\"4..|5..\", method=~\"$method\", path=~\"$path\"}[5m]))",
+          "legendFormat": "HTTP {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "req/s"},
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "single"}
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latência p50 / p95 / p99 (s) por rota (5m)",
+      "gridPos": {"h": 8, "w": 16, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, method, path) (rate(http_request_duration_seconds_bucket{method=~\"$method\", path=~\"$path\"}[5m])))",
+          "legendFormat": "p50 {{method}} {{path}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_bucket{method=~\"$method\", path=~\"$path\"}[5m])))",
+          "legendFormat": "p95 {{method}} {{path}}"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le, method, path) (rate(http_request_duration_seconds_bucket{method=~\"$method\", path=~\"$path\"}[5m])))",
+          "legendFormat": "p99 {{method}} {{path}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "s", "decimals": 3},
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "single"}
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top 5 rotas mais lentas (p95, 5m)",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "expr": "topk(5, histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_bucket{method=~\"$method\", path=~\"$path\"}[5m]))))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "s", "decimals": 3},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "S3 operações (últimos 15m)",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 20},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (op, status) (increase(s3_operations_total[15m]))",
+          "legendFormat": "{{op}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "options": {"displayMode": "gradient", "orientation": "horizontal"}
+    },
+    {
+      "type": "bargauge",
+      "title": "SQS operações (últimos 15m)",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 20},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (op, status) (increase(sqs_operations_total[15m]))",
+          "legendFormat": "{{op}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "options": {"displayMode": "gradient", "orientation": "horizontal"}
+    },
+    {
+      "type": "bargauge",
+      "title": "DynamoDB operações (últimos 15m)",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 20},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (op, status) (increase(dynamodb_operations_total[15m]))",
+          "legendFormat": "{{op}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "options": {"displayMode": "gradient", "orientation": "horizontal"}
+    }
+  ],
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {
+    "refresh_intervals": ["5s","10s","30s","1m","5m","15m","1h"]
+  }
+}

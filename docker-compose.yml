@@ -5,18 +5,20 @@ services:
       args:
         GIT_SHA: ${GIT_SHA:-dev}
     image: video-service-api:${GIT_SHA:-dev}
-    container_name: video-service-api
     env_file: .env
     ports:
       - "8094:8094"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8094
     depends_on:
       localstack:
         condition: service_healthy
     restart: unless-stopped
+    # Se quiser hot-reload local, descomente o volume abaixo e ajuste seu Dockerfile/WORKDIR:
+    # volumes:
+    #   - .:/app
 
   localstack:
     image: localstack/localstack:stable
-    container_name: localstack
     environment:
       - SERVICES=s3,sqs,dynamodb
       - DEBUG=1
@@ -32,3 +34,35 @@ services:
       timeout: 3s
       retries: 30
     restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin-fiap
+    ports:
+      - "3000:3000"
+    volumes:
+      # Provisioning (datasource + dashboards)
+      - ./observability/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      # JSONs dos dashboards que serão carregados pelo provider acima
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+

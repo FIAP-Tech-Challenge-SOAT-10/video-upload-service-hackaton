@@ -15,14 +15,14 @@ Microsserviço responsável por **gerenciar o ciclo de vida dos vídeos**: uploa
 - **Video Management Service (este repositório)**
   - API FastAPI:
     - `POST /videos/upload` → upload para S3 e envio de mensagem para a fila
-    - `GET /videos` → listagem de status por usuário (paginações por cursor)
+    - `GET /videos` → listagem de status por usuário (paginação por cursor)
     - `GET /videos/{id_video}` → detalhe de status do vídeo
-    - `GET /videos/download/{video_id}` → link de download pré-assinado do **ZIP processado**
+    - `GET /videos/download/{video_id}` → link pré-assinado do **ZIP processado**
     - `GET /health` → verificação de saúde
   - DynamoDB: persistência de metadados e status
   - S3: armazenamento do vídeo original e do `.zip` (após processamento)
   - SQS (ou equivalente): mensageria com retries/DLQ
-  - Observabilidade: logs estruturados + métricas Prometheus
+  - Observabilidade: **logs estruturados** + **métricas Prometheus (/metrics)**
 
 - **Auth Service (outro microsserviço)**
   - Cadastro/login de usuários
