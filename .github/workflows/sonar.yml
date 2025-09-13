@@ -17,20 +17,35 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # SonarCloud precisa do histórico p/ análise de PR
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
 
       - run: pip install -r requirements.txt
+
+      # Instala awscli + awslocal no runner
+      - name: Install awscli + awslocal
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install awscli awscli-local
+          awslocal --version
+          aws --version
+
       - name: Init AWS mocks (LocalStack)
-        run: bash scripts/init-aws.sh
         env:
           AWS_ENDPOINT_URL: http://localhost:4566
           AWS_DEFAULT_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+        run: |
+          chmod +x scripts/init-aws.sh
+          bash scripts/init-aws.sh
 
       - name: Tests + coverage
         run: |
