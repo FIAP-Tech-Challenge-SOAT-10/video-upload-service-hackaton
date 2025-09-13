@@ -1,0 +1,63 @@
+name: sonar
+on:
+  push: { branches: ["main"] }
+  pull_request:
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:stable
+        env:
+          SERVICES: s3,sqs,dynamodb
+        ports: ["4566:4566"]
+        options: >-
+          --health-cmd "awslocal s3 ls || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      # Instala awscli + awslocal no runner
+      - name: Install awscli + awslocal
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install awscli awscli-local
+          awslocal --version
+          aws --version
+
+      - name: Init AWS mocks (LocalStack)
+        env:
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+        run: |
+          chmod +x scripts/init-aws.sh
+          bash scripts/init-aws.sh
+
+      - name: Tests + coverage (coverage.py)
+        run: |
+          python -m pip install --upgrade pip
+          pip install coverage pytest
+          coverage run -m pytest -q --maxfail=1 --disable-warnings --junitxml=test-results.xml
+          coverage xml -o coverage.xml
+          echo "--- sanity check ---"
+          grep -o 'filename="[^"]\+"' coverage.xml | head -n 20 || true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

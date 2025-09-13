@@ -35,7 +35,7 @@ client = TestClient(app)
 
 
 def test_get_status_returns_fake_repo_data():
-    resp = client.get("/videos/status/1234")
+    resp = client.get("/videos/1234")
     assert resp.status_code == 200
     body = resp.json()
     assert body["id_video"] == "1234"
