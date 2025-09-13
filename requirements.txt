@@ -27,3 +27,6 @@ orjson==3.10.7
 # Testes
 pytest==8.3.3
 httpx==0.27.2
+
+# Prometheus
+prometheus-client==0.20.0
