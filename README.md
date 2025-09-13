@@ -8,10 +8,21 @@ Microsserviço responsável por **gerenciar o ciclo de vida dos vídeos**: uploa
 
 ---
 
-## Sonar Quality Gate Status
+## Status e Qualidade do Código
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=<SEU_PROJECT_KEY>&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+### CI/CD
+[![Build](https://github.com/FIAP-Tech-Challenge-SOAT-10/video-upload-service-hackaton/actions/workflows/sonar.yml/badge.svg)](https://github.com/FIAP-Tech-Challenge-SOAT-10/video-upload-service-hackaton/actions/workflows/sonar.yml)
 
+### SonarCloud
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=coverage)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=bugs)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
 
 ## Arquitetura
 
