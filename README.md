@@ -10,7 +10,7 @@ Microsserviço responsável por **gerenciar o ciclo de vida dos vídeos**: uploa
 
 ## Sonar Quality Gate Status
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=<SEU_PROJECT_KEY>&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=<SEU_PROJECT_KEY>)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=<SEU_PROJECT_KEY>&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
 
 
 ## Arquitetura
