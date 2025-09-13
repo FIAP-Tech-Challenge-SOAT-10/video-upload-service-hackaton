@@ -1,0 +1,43 @@
+name: sonar
+on:
+  push: { branches: ["main"] }
+  pull_request:
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:stable
+        env:
+          SERVICES: s3,sqs,dynamodb
+        ports: ["4566:4566"]
+        options: >-
+          --health-cmd "awslocal s3 ls || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # SonarCloud precisa do histórico p/ análise de PR
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - run: pip install -r requirements.txt
+      - name: Init AWS mocks (LocalStack)
+        run: bash scripts/init-aws.sh
+        env:
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Tests + coverage
+        run: |
+          pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=xml:coverage.xml
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
