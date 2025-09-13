@@ -49,7 +49,17 @@ jobs:
 
       - name: Tests + coverage
         run: |
-          pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=xml:coverage.xml
+          # roda a partir da raiz do repo
+          pwd
+          ls -lah
+          pytest -q --maxfail=1 --disable-warnings \
+            --junitxml=test-results.xml \
+            --cov=app --cov-report=xml:coverage.xml
+          echo "--- sanity check ---"
+          ls -lah coverage.xml || true
+          # Mostra caminhos que o coverage registrou
+          grep -o 'filename="[^"]\+"' coverage.xml | head -n 20 || true
+
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
