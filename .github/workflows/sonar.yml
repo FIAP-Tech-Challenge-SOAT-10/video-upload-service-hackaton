@@ -47,19 +47,14 @@ jobs:
           chmod +x scripts/init-aws.sh
           bash scripts/init-aws.sh
 
-      - name: Tests + coverage
+      - name: Tests + coverage (coverage.py)
         run: |
-          # roda a partir da raiz do repo
-          pwd
-          ls -lah
-          pytest -q --maxfail=1 --disable-warnings \
-            --junitxml=test-results.xml \
-            --cov=app --cov-report=xml:coverage.xml
+          python -m pip install --upgrade pip
+          pip install coverage pytest
+          coverage run -m pytest -q --maxfail=1 --disable-warnings --junitxml=test-results.xml
+          coverage xml -o coverage.xml
           echo "--- sanity check ---"
-          ls -lah coverage.xml || true
-          # Mostra caminhos que o coverage registrou
           grep -o 'filename="[^"]\+"' coverage.xml | head -n 20 || true
-
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
