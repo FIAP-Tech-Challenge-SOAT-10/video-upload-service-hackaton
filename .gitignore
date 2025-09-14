@@ -211,3 +211,5 @@ coverage.xml
 htmlcov/
 
 myenv/
+
+test-results.xml
