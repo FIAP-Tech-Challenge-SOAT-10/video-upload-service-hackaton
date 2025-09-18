@@ -10,12 +10,25 @@ services:
       - "8094:8094"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8094
     depends_on:
+      auth-service:
+        condition: service_healthy
       localstack:
         condition: service_healthy
     restart: unless-stopped
-    # Se quiser hot-reload local, descomente o volume abaixo e ajuste seu Dockerfile/WORKDIR:
-    # volumes:
-    #   - .:/app
+
+  auth-service:
+    image: auth-microservice:latest 
+    environment:
+      - PORT=8000
+    ports:
+      - "8000:8000"                 
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
 
   localstack:
     image: localstack/localstack:stable
