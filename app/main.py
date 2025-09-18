@@ -62,27 +62,6 @@ app = FastAPI(
     swagger_ui_parameters={"persistAuthorization": True},
 )
 
-# --- OpenAPI com Bearer ---
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title=app.title,
-        version=app.version,
-        routes=app.routes,
-    )
-    openapi_schema.setdefault("components", {}).setdefault("securitySchemes", {})
-    # use um ÚNICO nome e seja consistente (ex.: "bearerAuth")
-    openapi_schema["components"]["securitySchemes"]["bearerAuth"] = {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-    }
-    # aplica segurança global (todas as rotas mostram o cadeado)
-    openapi_schema["security"] = [{"bearerAuth": []}]
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -111,7 +90,4 @@ elif USE_INLINE_METRICS:
     @app.get("/metrics")
     def metrics():
         return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
-
-# >>> ESSENCIAL: ligar o custom_openapi no app FINAL <<<
-app.openapi = custom_openapi
 
