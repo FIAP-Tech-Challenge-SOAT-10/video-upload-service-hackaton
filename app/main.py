@@ -9,6 +9,8 @@ from app.core import auth as core_auth
 from app.infrastructure.clients.auth_client import AuthClient
 from app.routers import videos as videos_router
 
+from fastapi import APIRouter
+
 # opcional
 try:
     from app.core.logging import setup_logging
@@ -36,19 +38,38 @@ except Exception:
     from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
 
 
+router_debug = APIRouter(prefix="/debug", tags=["debug"])
+
+@router_debug.get("/auth-status")
+async def auth_status():
+    client = getattr(core_auth, "_auth_client", None)
+    info = {
+        "initialized": client is not None,
+        "base_url": getattr(client, "_base_url", None),
+        "timeout": getattr(client, "_timeout", None),
+        "cache_ttl": getattr(client, "_cache_ttl", None),
+    }
+    return info
+
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
     setup_logging()
-    core_auth.auth_client = AuthClient(
+
+    # inicializa e injeta no módulo core_auth
+    client = AuthClient(
         base_url=settings.auth_base_url,
         timeout_seconds=settings.auth_timeout_seconds,
         cache_ttl=settings.auth_cache_ttl_seconds,
     )
+    core_auth.auth_client = client
+    app.state.auth_client = client   # só se quiser acessar via request.app.state
+
     try:
         yield
     finally:
-        # shutdown
         if core_auth.auth_client:
             await core_auth.auth_client.aclose()
         core_auth.auth_client = None
@@ -76,6 +97,7 @@ if ObservabilityMiddleware:
 
 # Routers
 app.include_router(videos_router.router)
+app.include_router(router_debug)
 if health_router:
     app.include_router(health_router.router)
 else:

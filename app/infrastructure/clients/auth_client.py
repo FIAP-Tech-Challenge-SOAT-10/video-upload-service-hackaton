@@ -4,7 +4,10 @@ import time
 from typing import Any, Dict, Optional
 
 import httpx
+import logging
 
+
+logger = logging.getLogger("auth")
 
 class AuthClient:
     """Client fino para conversar com o Auth Service."""
@@ -18,7 +21,29 @@ class AuthClient:
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout)
+            async def on_request(request):
+                request.extensions["start"] = time.time()
+                logger.debug("HTTPX request: %s %s", request.method, request.url)
+
+            async def on_response(response):
+                start = response.request.extensions.get("start")
+                dur = f"{(time.time() - start):.3f}s" if start else "?"
+                body_snip = ""
+                try:
+                    body_snip = response.text[:200]
+                except Exception:
+                    pass
+                logger.debug(
+                    "HTTPX response: %s %s -> %s (%s) body=%r",
+                    response.request.method, response.request.url,
+                    response.status_code, dur, body_snip
+                )
+
+            self._client = httpx.AsyncClient(
+                base_url=self._base_url,
+                timeout=self._timeout,
+                event_hooks={"request": [on_request], "response": [on_response]},
+            )
         return self._client
 
     async def login(self, username: str, password: str) -> Dict[str, Any]:

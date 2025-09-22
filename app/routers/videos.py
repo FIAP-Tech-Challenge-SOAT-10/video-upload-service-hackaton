@@ -15,11 +15,13 @@ from ..utils.s3 import build_s3_key, put_object
 from ..aws import sqs, s3
 
 from app.core.metrics import UPLOAD_BYTES, SQS_OPS
-from app.auth import require_jwt
+from typing import Dict, Any
+from app.auth import require_user
 
 router = APIRouter(
     prefix="/videos",
     tags=["videos"],
+    dependencies=[Depends(require_user)]
 )
 
 ALLOWED_MIME_PREFIX = "video/"
@@ -35,7 +37,7 @@ async def upload_video(
     file: UploadFile = File(...),
     repo: IVideoRepository = Depends(get_video_repo),
     _sec: HTTPAuthorizationCredentials = Security(bearer),  # expõe o esquema no OpenAPI
-    _token: str = Depends(require_jwt),                     # valida de verdade o token
+    _token: str = Depends(require_user),                     # valida de verdade o token
 ) -> UploadResponse:
     id_video = str(uuid.uuid4())
 
@@ -92,7 +94,7 @@ def get_status(
     id_video: str,
     repo: IVideoRepository = Depends(get_video_repo),
     _sec: HTTPAuthorizationCredentials = Security(bearer),
-    _token: str = Depends(require_jwt),
+    _token: str = Depends(require_user),
 ) -> StatusResponse:
     item = repo.get(id_video)
     if not item:
@@ -104,7 +106,7 @@ def get_download(
     video_id: str,
     repo: IVideoRepository = Depends(get_video_repo),
     _sec: HTTPAuthorizationCredentials = Security(bearer),
-    _token: str = Depends(require_jwt),
+    _token: str = Depends(require_user),
 ):
     item = repo.get(video_id)
     if not item:
