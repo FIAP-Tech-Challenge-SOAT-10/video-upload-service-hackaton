@@ -6,6 +6,10 @@ services:
         GIT_SHA: ${GIT_SHA:-dev}
     image: video-service-api:${GIT_SHA:-dev}
     env_file: .env
+    environment:
+      - AUTH_BASE_URL=http://host.docker.internal:8000    
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # garante no Linux/WSL    
     ports:
       - "8094:8094"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8094
@@ -13,9 +17,6 @@ services:
       localstack:
         condition: service_healthy
     restart: unless-stopped
-    # Se quiser hot-reload local, descomente o volume abaixo e ajuste seu Dockerfile/WORKDIR:
-    # volumes:
-    #   - .:/app
 
   localstack:
     image: localstack/localstack:stable

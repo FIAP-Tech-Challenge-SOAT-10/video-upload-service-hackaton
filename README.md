@@ -1,10 +1,10 @@
 # Video Management Service (FIAP SOAT)
 
-Microsserviço responsável por **gerenciar o ciclo de vida dos vídeos**: upload, status e geração de links de download.
+Microsserviço responsável por **gerenciar o ciclo de vida de vídeos**: upload, consulta de status e geração do link de download do arquivo **processado**.
 
-> ❗ **Autenticação fora deste serviço**  
-> A autenticação e a emissão de tokens JWT são tratadas por um **Auth Service** independente.  
-> Este serviço apenas **valida tokens recebidos** para garantir que cada usuário acesse apenas seus próprios vídeos.
+> **Autenticação fora deste serviço**  
+> A autenticação/JWT é responsabilidade de um **Auth Service** separado.  
+> Aqui apenas **validamos** o token recebido para garantir acesso aos recursos do próprio usuário.
 
 ---
 
@@ -24,36 +24,42 @@ Microsserviço responsável por **gerenciar o ciclo de vida dos vídeos**: uploa
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=FIAP-Tech-Challenge-SOAT-10_video-upload-service-hackaton)
 
-## Arquitetura
+---
 
-### Componentes
+## Sumário
 
-- **Video Management Service (este repositório)**
-  - API FastAPI:
-    - `POST /videos/upload` → upload para S3 e envio de mensagem para a fila
-    - `GET /videos` → listagem de status por usuário (paginação por cursor)
-    - `GET /videos/{id_video}` → detalhe de status do vídeo
-    - `GET /videos/download/{video_id}` → link pré-assinado do **ZIP processado**
-    - `GET /health` → verificação de saúde
-  - DynamoDB: persistência de metadados e status
-  - S3: armazenamento do vídeo original e do `.zip` (após processamento)
-  - SQS (ou equivalente): mensageria com retries/DLQ
-  - Observabilidade: **logs estruturados** + **métricas Prometheus (/metrics)**
-
-- **Auth Service (outro microsserviço)**
-  - Cadastro/login de usuários
-  - Emissão de tokens JWT (claim `sub` ou `user_id`)
-  - Este serviço **valida** tokens emitidos pelo Auth
-
-- **Video Processing Service (outro microsserviço)**
-  - Worker/consumer da fila
-  - Processa o vídeo com `ffmpeg`, gera `.zip` e envia para S3
-  - Atualiza status no DynamoDB (`PROCESSING` → `DONE`/`ERROR`)
-  - Notifica erros (log/webhook/email)
+- [Arquitetura](#arquitetura)
+- [Endpoints](#endpoints)
+- [Modelo de Dados](#modelo-de-dados)
+- [Como rodar (local / Docker)](#como-rodar-local--docker)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Observabilidade](#observabilidade)
+- [Qualidade (Testes, Cobertura e Sonar)](#qualidade-testes-cobertura-e-sonar)
+- [Segurança (S3 ExpectedBucketOwner)](#segurança-s3-expectedbucketowner)
+- [Roadmap](#roadmap)
+- [Licença](#licença)
 
 ---
 
-## Diagrama da Arquitetura
+## Arquitetura
+
+### Componentes (MVP)
+
+- **Video Management Service (este repo / FastAPI)**
+  - `POST /videos/upload` → faz upload para S3 e publica mensagem na fila
+  - `GET /videos/{id_video}` → consulta status (DynamoDB)
+  - `GET /videos/download/{video_id}` → gera link **pré-assinado** do ZIP processado
+  - `GET /health` → verificação de saúde
+  - `GET /metrics` → métricas Prometheus
+  - **S3**: armazena o vídeo original (upload) e o `.zip` final  
+  - **DynamoDB**: guarda metadados e status  
+  - **SQS**: fila para o serviço de processamento
+
+- **Auth Service (externo)**: login/registro/JWT (este serviço **valida** o token)
+
+- **Video Processing Service (externo)**: consome SQS, processa com `ffmpeg`, grava `.zip` no S3 e atualiza status no DynamoDB.
+
+### Diagrama
 
 ```mermaid
 flowchart LR

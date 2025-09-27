@@ -3,7 +3,8 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from ..config import settings
 from ..domain.models.video import VideoItem
@@ -14,16 +15,25 @@ from ..utils.s3 import build_s3_key, put_object
 from ..aws import sqs, s3
 
 from app.core.metrics import UPLOAD_BYTES, SQS_OPS
+from typing import Dict, Any
+from app.auth import require_user
 
-router = APIRouter(prefix="/videos", tags=["videos"])
+import logging
+
+router = APIRouter(
+    prefix="/videos",
+    tags=["videos"],
+    dependencies=[Depends(require_user)]
+)
 
 ALLOWED_MIME_PREFIX = "video/"
+bearer = HTTPBearer()  
 
 
-# Provider simples para injeção
 def get_video_repo() -> IVideoRepository:
     return VideoRepo()
 
+logger = logging.getLogger("videos")
 
 @router.post("/upload", response_model=UploadResponse, status_code=202)
 async def upload_video(
@@ -31,22 +41,21 @@ async def upload_video(
     autor: str = Form(..., max_length=100),
     file: UploadFile = File(...),
     repo: IVideoRepository = Depends(get_video_repo),
+    _sec: HTTPAuthorizationCredentials = Security(bearer),  # expõe o esquema no OpenAPI
+    _token: str = Depends(require_user),                     # valida de verdade o token
 ) -> UploadResponse:
     id_video = str(uuid.uuid4())
 
-    # validação leve de content type e tamanho
     if not (file.content_type or "").startswith(ALLOWED_MIME_PREFIX):
         raise HTTPException(status_code=415, detail="Tipo de arquivo não suportado (esperado video/*)")
 
     data = await file.read()
-    # Métrica de bytes recebidos (conta tentativa de upload)
     UPLOAD_BYTES.inc(len(data))
 
     max_bytes = settings.max_upload_mb * 1024 * 1024
     if len(data) > max_bytes:
         raise HTTPException(status_code=413, detail=f"Arquivo excede limite de {settings.max_upload_mb}MB")
 
-    # grava no S3
     _, key = build_s3_key(file.filename)
     try:
         put_object(settings.s3_bucket, key, data, file.content_type or "application/octet-stream")
@@ -62,14 +71,18 @@ async def upload_video(
         file_path=f"s3://{settings.s3_bucket}/{key}",
         data_criacao=now,
         data_upload=now,
+        email=_token.email,
+        username=_token.username,
+        id=_token.id,
     )
 
-    # salva metadados
     repo.put(item.model_dump(mode="json"))
 
-    # publica mensagem para processamento
+    logger.info(f"Enviando mensagem SQS para processamento: {item.model_dump_json()}")
+
     try:
         sqs.send_message(QueueUrl=settings.sqs_queue_url, MessageBody=item.model_dump_json())
+        logger.info(f"Message Body: {item.model_dump_json()}")
         SQS_OPS.labels(op="send", status="ok").inc()
     except Exception:
         SQS_OPS.labels(op="send", status="error").inc()
@@ -82,36 +95,44 @@ async def upload_video(
         status=item.status,
         s3_key=key,
         links={
-            "status": f"/videos/{item.id_video}",              # atualizado para o novo endpoint
+            "status": f"/videos/{item.id_video}",
             "download": f"/videos/download/{item.id_video}",
         },
+        email=item.email,
+        username=item.username,
+        id=item.id,
     )
 
-
 @router.get("/{id_video}", response_model=StatusResponse)
-def get_status(id_video: str, repo: IVideoRepository = Depends(get_video_repo)) -> StatusResponse:
+def get_status(
+    id_video: str,
+    repo: IVideoRepository = Depends(get_video_repo),
+    _sec: HTTPAuthorizationCredentials = Security(bearer),
+    _token: str = Depends(require_user),
+) -> StatusResponse:
     item = repo.get(id_video)
     if not item:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
     return StatusResponse(**item)
 
-
 @router.get("/download/{video_id}")
-def get_download(video_id: str, repo: IVideoRepository = Depends(get_video_repo)):
+def get_download(
+    video_id: str,
+    repo: IVideoRepository = Depends(get_video_repo),
+    _sec: HTTPAuthorizationCredentials = Security(bearer),
+    _token: str = Depends(require_user),
+):
     item = repo.get(video_id)
     if not item:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
 
-    # Preferir o ZIP processado (quando o Processing Service preencher zip_path/s3_key_zip)
     zip_path = item.get("zip_path") or item.get("s3_key_zip")
-    if zip_path:
-        if not zip_path.startswith("s3://"):
-            raise HTTPException(status_code=400, detail="zip_path inválido")
-        parsed = urlparse(zip_path)
-    else:
-        # Se ainda não processou, retorne 409 (ou remova este bloco para baixar o original)
+    if not zip_path:
         raise HTTPException(status_code=409, detail="Processamento ainda não finalizado ou ZIP indisponível")
+    if not zip_path.startswith("s3://"):
+        raise HTTPException(status_code=400, detail="zip_path inválido")
 
+    parsed = urlparse(zip_path)
     bucket = parsed.netloc
     key = parsed.path.lstrip("/")
     url = s3.generate_presigned_url(
