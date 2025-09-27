@@ -8,6 +8,7 @@ import hashlib
 import logging
 
 from app.infrastructure.clients.auth_client import AuthClient
+from app.domain.models.user_model import UserContext
 
 
 try:
@@ -81,25 +82,41 @@ async def _fetch_me(token: str):
     except (httpx.TimeoutException, httpx.RequestError) as e:
         logger.error("Erro de rede em /me (token_id=%s): %s", tid, e)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Auth Service inacessível")
+
 async def require_user(
     credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)
-) -> Dict[str, Any]:
-    """
-    Dependency principal. Valida o Bearer e devolve o payload do usuário (ex.: sub, roles, scopes, etc.).
-    """
-    if credentials is None or (credentials.scheme or "").lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
-    token = credentials.credentials.strip()
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token vazio")
+) -> UserContext:
+    if not credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
-    user = await _fetch_me(token)
+    token = credentials.credentials
+    payload = await _fetch_me(token)  # faz GET no auth-service /me e retorna o dict mostrado por você
 
-    # Se seu /me retorna algo como {"active": true}:
-    if isinstance(user, dict) and user.get("active") is False:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
+    try:
+        return UserContext(**payload)
+    except Exception as e:
+        # fallback amigável para diferenças de key (se algum campo vier faltando, etc.)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Invalid /me payload: {e}")
 
-    return user
+# async def require_user(
+#     credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)
+# ) -> Dict[str, Any]:
+#     """
+#     Dependency principal. Valida o Bearer e devolve o payload do usuário (ex.: sub, roles, scopes, etc.).
+#     """
+#     if credentials is None or (credentials.scheme or "").lower() != "bearer":
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
+#     token = credentials.credentials.strip()
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token vazio")
+
+#     user = await _fetch_me(token)
+
+#     # Se seu /me retorna algo como {"active": true}:
+#     if isinstance(user, dict) and user.get("active") is False:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
+
+#     return user
 
 def _has_every(scope_needed: Iterable[str], scopes_user: Iterable[str]) -> bool:
     want = set(s.strip() for s in scope_needed if s and s.strip())

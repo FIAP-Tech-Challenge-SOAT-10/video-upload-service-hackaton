@@ -18,6 +18,8 @@ from app.core.metrics import UPLOAD_BYTES, SQS_OPS
 from typing import Dict, Any
 from app.auth import require_user
 
+import logging
+
 router = APIRouter(
     prefix="/videos",
     tags=["videos"],
@@ -25,10 +27,13 @@ router = APIRouter(
 )
 
 ALLOWED_MIME_PREFIX = "video/"
-bearer = HTTPBearer()  # reutilizável
+bearer = HTTPBearer()  
+
 
 def get_video_repo() -> IVideoRepository:
     return VideoRepo()
+
+logger = logging.getLogger("videos")
 
 @router.post("/upload", response_model=UploadResponse, status_code=202)
 async def upload_video(
@@ -66,12 +71,18 @@ async def upload_video(
         file_path=f"s3://{settings.s3_bucket}/{key}",
         data_criacao=now,
         data_upload=now,
+        email=_token.email,
+        username=_token.username,
+        id=_token.id,
     )
 
     repo.put(item.model_dump(mode="json"))
 
+    logger.info(f"Enviando mensagem SQS para processamento: {item.model_dump_json()}")
+
     try:
         sqs.send_message(QueueUrl=settings.sqs_queue_url, MessageBody=item.model_dump_json())
+        logger.info(f"Message Body: {item.model_dump_json()}")
         SQS_OPS.labels(op="send", status="ok").inc()
     except Exception:
         SQS_OPS.labels(op="send", status="error").inc()
@@ -87,6 +98,9 @@ async def upload_video(
             "status": f"/videos/{item.id_video}",
             "download": f"/videos/download/{item.id_video}",
         },
+        email=item.email,
+        username=item.username,
+        id=item.id,
     )
 
 @router.get("/{id_video}", response_model=StatusResponse)

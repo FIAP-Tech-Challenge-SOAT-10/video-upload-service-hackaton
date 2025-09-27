@@ -10,3 +10,6 @@ class VideoItem(BaseModel):
     file_path: str
     data_criacao: datetime = Field(default_factory=datetime.utcnow)
     data_upload: datetime = Field(default_factory=datetime.utcnow)
+    email: Optional[str] = None
+    username: Optional[str] = None
+    id: Optional[int] = None
