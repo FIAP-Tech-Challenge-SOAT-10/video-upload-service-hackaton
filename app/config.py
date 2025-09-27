@@ -4,6 +4,12 @@ from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+
+    os.environ.setdefault("AUTH_BASE_URL", "http://172.17.0.1:8000")
+    os.environ.setdefault("S3_BUCKET", "video-service-bucket")
+    os.environ.setdefault("SQS_QUEUE_URL", "http://localstack:4566/000000000000/video-processing-queue")
+    os.environ.setdefault("MAX_UPLOAD_MB", "200")
+
     # Defaults "normais" (sobrepostos por env/.env)
     aws_region: str = "us-east-1"
     aws_endpoint_url: Optional[str] = None
