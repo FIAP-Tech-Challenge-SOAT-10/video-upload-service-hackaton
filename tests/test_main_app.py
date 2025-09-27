@@ -2,6 +2,7 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 from fastapi.middleware.cors import CORSMiddleware
+import app.main as main
 
 def _fresh_app():
     # garante app.main “limpo” caso outros testes mexam em sys.modules
@@ -32,3 +33,51 @@ def test_app_metadata_routes_and_cors():
 
         # Deve haver ao menos uma rota de /videos registrada
         assert any(p.startswith("/videos") for p in paths.keys()), f"paths={list(paths.keys())}"
+
+@pytest.fixture
+def client():
+    # rota de debug não deve exigir auth; se exigir, adicione headers={"Authorization": "Bearer test"}
+    with TestClient(main.app) as c:
+        yield c
+
+
+@pytest.fixture(autouse=True)
+def reset_auth_client(monkeypatch):
+    # garante estado limpo do _auth_client antes/depois de cada teste
+    monkeypatch.setattr(main.core_auth, "_auth_client", None, raising=False)
+    yield
+    monkeypatch.setattr(main.core_auth, "_auth_client", None, raising=False)
+
+
+def test_auth_status_uninitialized(client):
+    resp = client.get("/debug/auth-status")
+    assert resp.status_code == 200
+    assert resp.headers.get("content-type", "").startswith("application/json")
+
+    body = resp.json()
+    assert body["initialized"] is False
+    assert body["base_url"] is None
+    assert body["timeout"] is None
+    assert body["cache_ttl"] is None
+
+
+def test_auth_status_initialized(client, monkeypatch):
+    class FakeAuthClient:
+        def __init__(self):
+            self._base_url = "http://auth:8000"
+            self._timeout = 7
+            self._cache_ttl = 30
+
+    # injeta um cliente “inicializado” no mesmo objeto core_auth usado pelo main
+    monkeypatch.setattr(main.core_auth, "_auth_client", FakeAuthClient(), raising=False)
+
+    resp = client.get("/debug/auth-status")
+    assert resp.status_code == 200
+
+    body = resp.json()
+    assert body == {
+        "initialized": True,
+        "base_url": "http://auth:8000",
+        "timeout": 7,
+        "cache_ttl": 30,
+    }
