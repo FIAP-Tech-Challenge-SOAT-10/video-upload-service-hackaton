@@ -14,16 +14,17 @@ import app.core.auth as auth_mod
 def reset_auth_globals(monkeypatch):
     # Garante estado limpo entre testes
     monkeypatch.setattr(auth_mod, "auth_client", None, raising=False)
-    # _auth_client pode não existir; ainda assim setamos/limpamos
+    # _auth_client não existe mais, mas manter compatibilidade não faz mal:
     if not hasattr(auth_mod, "_auth_client"):
         monkeypatch.setattr(auth_mod, "_auth_client", None, raising=False)
     else:
         auth_mod._auth_client = None
-    # Garante que except httpx.* funcione (caso httpx não tenha sido importado no módulo)
+    # Garante que except httpx.* funcione mesmo que o módulo não tivesse importado
     monkeypatch.setattr(auth_mod, "httpx", httpx, raising=False)
     yield
     auth_mod.auth_client = None
-    auth_mod._auth_client = None
+    if hasattr(auth_mod, "_auth_client"):
+        auth_mod._auth_client = None
 
 
 # ====== _safe_token_id ======
@@ -53,9 +54,7 @@ def test_ensure_client_initializes_on_demand(monkeypatch):
         raising=False,
     )
 
-    # Patch do AuthClient usado pelo import interno
-    import app.infrastructure.clients.auth_client as acmod
-
+    # Patch do AuthClient **no módulo testado** (mudou!)
     created = {}
     class FakeAuthClient:
         def __init__(self, base_url, timeout_seconds, cache_ttl):
@@ -66,7 +65,7 @@ def test_ensure_client_initializes_on_demand(monkeypatch):
         async def me(self, token):  # só p/ compatibilidade
             return {"ok": True}
 
-    monkeypatch.setattr(acmod, "AuthClient", FakeAuthClient, raising=True)
+    monkeypatch.setattr(auth_mod, "AuthClient", FakeAuthClient, raising=True)
 
     c1 = auth_mod._ensure_client()
     c2 = auth_mod._ensure_client()
@@ -184,7 +183,7 @@ def test_get_auth_client_returns_instance(monkeypatch):
 # ====== get_current_user (dependência FastAPI) ======
 
 @pytest.mark.asyncio
-async def test_get_current_user_ok(monkeypatch):
+async def test_get_current_user_ok():
     class FakeClient:
         async def me(self, token): return {"id": 1}
 
@@ -205,7 +204,7 @@ async def test_get_current_user_missing_header_401():
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_invalid_token_401(monkeypatch):
+async def test_get_current_user_invalid_token_401():
     class FakeClient:
         async def me(self, token): raise RuntimeError("nope")
 
