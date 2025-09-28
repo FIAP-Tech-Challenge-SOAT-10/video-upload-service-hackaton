@@ -12,4 +12,4 @@ class VideoItem(BaseModel):
     data_upload: datetime = Field(default_factory=datetime.utcnow)
     email: Optional[str] = None
     username: Optional[str] = None
-    id: Optional[int] = None
+    id: Optional[str] = None

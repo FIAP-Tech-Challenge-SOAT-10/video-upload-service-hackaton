@@ -20,6 +20,8 @@ from app.auth import require_user
 
 import logging
 
+from typing import List
+
 router = APIRouter(
     prefix="/videos",
     tags=["videos"],
@@ -63,6 +65,9 @@ async def upload_video(
         raise HTTPException(status_code=502, detail=f"Falha ao salvar no storage: {e}")
 
     now = datetime.utcnow()
+
+    user_id = str(_token.id)
+
     item = VideoItem(
         id_video=id_video,
         titulo=titulo.strip(),
@@ -73,7 +78,7 @@ async def upload_video(
         data_upload=now,
         email=_token.email,
         username=_token.username,
-        id=_token.id,
+        id=user_id,
     )
 
     repo.put(item.model_dump(mode="json"))
@@ -102,6 +107,20 @@ async def upload_video(
         username=item.username,
         id=item.id,
     )
+
+@router.get("/user/videos", response_model=List[VideoItem])
+def list_my_videos(
+    repo: IVideoRepository = Depends(get_video_repo),
+    _sec: HTTPAuthorizationCredentials = Security(bearer),  # expõe o esquema no OpenAPI
+    _token = Depends(require_user),                         # payload do /me (tem .id, .email, etc.)
+) -> List[VideoItem]:
+    """
+    Lista todos os vídeos do usuário autenticado.
+    Usa o `id` vindo do token JWT (não aceita id por parâmetro).
+    """
+    items = repo.list_by_user(_token.id)  # novo método no repo
+    # retorno vazio é 200 com []
+    return [VideoItem(**it) for it in items]    
 
 @router.get("/{id_video}", response_model=StatusResponse)
 def get_status(

@@ -1,6 +1,7 @@
 # app/domain/repositories/video_repository_interface.py
 from abc import ABC, abstractmethod
 from typing import Optional
+from typing import List
 
 
 class IVideoRepository(ABC):
@@ -20,3 +21,6 @@ class IVideoRepository(ABC):
     def update_status(self, id_video: str, status: str) -> None:
         """Atualiza o status de um vídeo"""
         pass
+
+    @abstractmethod
+    def list_by_user(self, user_id) -> List[dict]: ...  # <-- novo

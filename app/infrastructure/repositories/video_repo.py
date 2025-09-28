@@ -4,6 +4,8 @@ from app.domain.repositories.video_repository_interface import IVideoRepository
 import app.aws as aws_mod   # <-- importe o módulo, não o símbolo
 
 from app.core.metrics import DDB_OPS
+from typing import List
+from boto3.dynamodb.conditions import Attr, Key
 
 
 class VideoRepo(IVideoRepository):
@@ -27,3 +29,20 @@ class VideoRepo(IVideoRepository):
             ExpressionAttributeNames={"#s": "status"},
             ExpressionAttributeValues={":s": status, ":u": datetime.utcnow().isoformat()},
         )
+
+    def list_by_user(self, user_id) -> List[dict]:
+        """
+        Retorna todos os vídeos cujo atributo 'id' == user_id (do token).
+        Observação: Scan + Filter; troque por Query com GSI para produção.
+        """
+        user_id = str(user_id)
+        
+        try:
+            resp = aws_mod.table_videos.scan(
+                FilterExpression=Attr("id").eq(user_id)  # se preferir por email, use Attr("email").eq(email)
+            )
+            DDB_OPS.labels(op="scan", status="ok").inc()
+            return resp.get("Items", [])
+        except Exception:
+            DDB_OPS.labels(op="scan", status="error").inc()
+            raise
