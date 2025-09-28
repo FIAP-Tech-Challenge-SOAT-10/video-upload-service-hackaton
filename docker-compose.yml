@@ -39,7 +39,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus:/etc/prometheus:ro
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus

@@ -39,6 +39,10 @@ def test_concrete_inmemory_repo_implements_contract_and_calls_super_to_cover_pas
             if id_video in self._store:
                 self._store[id_video]["status"] = status
 
+        def list_by_user(self, user_id) -> list:  # type: ignore[override]
+            super().list_by_user(user_id)  # idem
+            return [item for item in self._store.values() if item.get("id") == user_id]
+
     repo = InMemoryRepo()
     assert isinstance(repo, IVideoRepository)
 

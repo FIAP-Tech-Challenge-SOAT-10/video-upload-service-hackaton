@@ -27,11 +27,39 @@ class FakeRepoOK(IVideoRepository):
         }
     def update_status(self, id_video: str, status: str) -> None:
         self.last_status = (id_video, status)
+    def list_by_user(self, user_id) -> list:
+        return [
+            {
+                "id_video": "vid1",
+                "titulo": "Video 1",
+                "autor": "Author 1",
+                "status": "DONE",
+                "file_path": "s3://bucket/vid1.mp4",
+                "data_criacao": "2025-09-07T00:00:00",
+                "data_upload": "2025-09-07T00:00:00",
+                "email": "user@example.com",
+                "username": "tester",
+                "id": str(user_id),
+            },
+            {
+                "id_video": "vid2",
+                "titulo": "Video 2",
+                "autor": "Author 2",
+                "status": "PROCESSING",
+                "file_path": "s3://bucket/vid2.mp4",
+                "data_criacao": "2025-09-07T00:00:00",
+                "data_upload": "2025-09-07T00:00:00",
+                "email": "user@example.com",
+                "username": "tester",
+                "id": str(user_id),
+            },
+        ]
 
 class FakeRepoNotFound(IVideoRepository):
     def put(self, item: dict) -> None: ...
     def get(self, id_video: str): return None
     def update_status(self, id_video: str, status: str) -> None: ...
+    def list_by_user(self, user_id) -> list: return []
 
 class FakeRepoZipNone(FakeRepoOK):
     def get(self, id_video: str):

@@ -37,6 +37,9 @@ def test_put_and_get_video(videos_table):
         "file_path": "s3://video-service-bucket/test.mp4",
         "data_criacao": now,
         "data_upload": now,
+        "email": "user@example.com",
+        "username": "tester",
+        "id": str("123"),
     }
 
     # put
