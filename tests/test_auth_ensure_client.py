@@ -8,12 +8,9 @@ import app.core.auth as auth_mod
 @pytest.fixture(autouse=True)
 def reset_global(monkeypatch):
     # garante estado limpo entre os testes
-    if not hasattr(auth_mod, "_auth_client"):
-        monkeypatch.setattr(auth_mod, "_auth_client", None, raising=False)
-    else:
-        auth_mod._auth_client = None
+    monkeypatch.setattr(auth_mod, "auth_client", None, raising=False)
     yield
-    auth_mod._auth_client = None
+    auth_mod.auth_client = None
 
 
 def test_returns_cached_instance_when_already_set(monkeypatch):
@@ -21,7 +18,8 @@ def test_returns_cached_instance_when_already_set(monkeypatch):
         pass
 
     cached = CachedClient()
-    monkeypatch.setattr(auth_mod, "_auth_client", cached, raising=False)
+    # agora o cache é em auth_client
+    monkeypatch.setattr(auth_mod, "auth_client", cached, raising=False)
 
     got = auth_mod._ensure_client()
     assert got is cached  # deve retornar o cache e NÃO tentar ler settings
@@ -41,8 +39,7 @@ def test_initializes_from_settings_and_caches(monkeypatch):
         raising=False,
     )
 
-    # 2) Fake AuthClient na origem correta (módulo onde a função importa)
-    import app.infrastructure.clients.auth_client as acmod
+    # 2) Fake AuthClient no próprio módulo sob teste (import no topo)
     created = {}
 
     class FakeAuthClient:
@@ -51,13 +48,13 @@ def test_initializes_from_settings_and_caches(monkeypatch):
             created["timeout_seconds"] = timeout_seconds
             created["cache_ttl"] = cache_ttl
 
-    monkeypatch.setattr(acmod, "AuthClient", FakeAuthClient, raising=True)
+    monkeypatch.setattr(auth_mod, "AuthClient", FakeAuthClient, raising=True)
 
-    # 3) Chama e valida
+    # 3) Chama e valida (cache deve ser mantido)
     c1 = auth_mod._ensure_client()
     c2 = auth_mod._ensure_client()
     assert isinstance(c1, FakeAuthClient)
-    assert c2 is c1  # cache mantido
+    assert c2 is c1
     assert created == {
         "base_url": "http://auth:8000",
         "timeout_seconds": 7,
