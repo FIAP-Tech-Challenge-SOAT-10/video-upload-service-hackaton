@@ -98,26 +98,6 @@ async def require_user(
         # fallback amigável para diferenças de key (se algum campo vier faltando, etc.)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Invalid /me payload: {e}")
 
-# async def require_user(
-#     credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)
-# ) -> Dict[str, Any]:
-#     """
-#     Dependency principal. Valida o Bearer e devolve o payload do usuário (ex.: sub, roles, scopes, etc.).
-#     """
-#     if credentials is None or (credentials.scheme or "").lower() != "bearer":
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
-#     token = credentials.credentials.strip()
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token vazio")
-
-#     user = await _fetch_me(token)
-
-#     # Se seu /me retorna algo como {"active": true}:
-#     if isinstance(user, dict) and user.get("active") is False:
-#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
-
-#     return user
-
 def _has_every(scope_needed: Iterable[str], scopes_user: Iterable[str]) -> bool:
     want = set(s.strip() for s in scope_needed if s and s.strip())
     have = set(s.strip() for s in scopes_user if s and s.strip())
